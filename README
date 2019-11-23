@@ -1,0 +1,156 @@
+README
+COMP40 HW 6: The UM
+
+By:   Sitara Rao (srao03) and Arnav Kothari (akotha02)
+Date: 11/20/2019
+
+
+We would like to acknowledge TA Daniel, Stack Overflow, and the Comp40
+Piazza page for answering all of our questions about how to build our UM.
+We believe everything has been correctly implemented.
+
+Time spent analyzing the assignment: 5 hours
+Time spent preparing our design:     5 hours
+Time spent solving the problem:     20 hours
+
+
+
+Departures from design:
+    - We initialized the program (by calling init_prog()) in um_new
+      rather than in um_run() as we expected
+    - We ended up storing segment size in the first index of the array
+      representing each segment
+    Other than these, we did not have any significant departures from our
+    original design doc.
+
+
+
+Architecture:
+    Our um is organized into 3 modules. The hierarchy is as follows:
+
+    UM is the module at the top level of the um program. It operates on
+    a struct of type um_obj, which contains a pointer to its memory (a 
+    seg_mem_obj), as well as a uint32_t array of size 8 to represent its
+    8 registers. The struct also contains a uint32_t program_counter to 
+    keep track of the current instruction that is being executed in um_run().
+    This module does not access or manipulate the um memory or registers
+    directly. To update registers or access memory per program instructions,
+    it relies on the instructions module (which, in turn, relies on the seg_mem
+    module). To iterate through program instructions in um_run(), this
+    module relies directly on the seg_mem module.
+
+
+    INSTRUCTIONS is a level below the um module. It handles operations on the
+    um's registers and functions as an intermediary between the um and seg_mem
+    modules when carrying out segmented loads, segmented stores, maps, and
+    unmaps.
+
+
+    SEG_MEM is the lowest-level module that the um program relies on.
+    It handles the representation and management of the universal machine's
+    segmented memory. It operates on memory of type seg_mem_obj, which is a
+    struct of 2 Hanson sequences. Seq_t mapped stores all currently mapped
+    segments of memory. Each element is an array of uint32_ts, each of which is
+    a program instruction. The 0th index of every segment is the size of the
+    segment; this fact is hidden from the um and instructions modules. Within
+    the seg_mem_obj, Seq_t unmapped stores currently unmapped segment IDs. 
+
+
+Time to process 50 million instructions: 
+    Using the time command and a (temporarily inserted) global variable in our
+    um.c file, we were able to calculate how many instructions our UM exectuted
+    while running ./um sandmark.umz. Our UM took 133 seconds to read in and
+    execute 2,113,497,560 instructions. Assuming a linear relationship between
+    number of instructions and time taken to run a um program, it would take
+    about ((133 seconds / 2B instructions) * 50M instructions) = 3.3 seconds.
+
+    Using CPUtimer to start and stop a timer before and after our um_run()
+    function, we were able to only time how long it took to actually execute
+    the instructions (not to read them in or free memory not specified by the
+    um program). To process the 2,113,497,560 instructions in sandmark.um, our
+    machine took 132882338533.000000 ns = 132.9 seconds. So measuring this way
+    does not really change our answer.
+    
+
+UMTESTS:
+    (Mentions each UM unit test (from UMTESTS) by name, explaining what each one
+    tests and how)
+
+output.um
+- Tested loadval and output simultaneously in this program by loading the
+  value 66 into a register and then outputting that register. output.1 has
+  B as its contents since 66 in ASCII is equivalent to B. So, when we run 
+  our um on this program, it prints B to stdout like we expect. 
+
+input.um
+- Tested our input by taking a w from a file and then outputing the contents
+  of that file into stdout using our tested output function.
+
+halt-verbose.um
+- Tested our halt by calling halt before a variety of already tested functions.
+  We expect nothing to be printed to stdout since halt should stop the program.
+
+add.um
+- Tested our add by calling loadval on twice on two registers, calling
+  our add function, and then finally outputting the sum of the register values.
+  Again, there had to be reference to ASCII values in order to add, we added 30
+  and 44, which should equal 74 and in ASCII that is the letter J.
+
+multipy.um
+- Tested our multiplication by loading values 7 and 10 in registers, calling
+  our multiply function, and then finally outputting the register that holds
+  the computation. Again, there had to be reference to ASCII values in order 
+  to multiply, we multiplied 10 and 7, which should equal 70 and in ASCII 
+  that is the letter J.
+
+division.um
+- Tested our division by loading values 700 and 10 in two registers, calling
+  our division function, and then finally outputting the register that holds
+  the computation. Again, there had to be reference to ASCII values in order 
+  to division, we divded 700 and 10, which should equal 70 and in ASCII 
+  that is the letter J.
+
+bitwise_nand.um
+- Tested our bitwise_nand by finding the largest value load_val can store,
+  2^25-1 = 33554431 storing this number into a register. Then we subtracted
+  64 by this number and stored that value into another register. We figured
+  that doing the bitwise_nand on these registers should store 64 into a 
+  register, which then is the '@' in ASCII. Then we outputted this register.
+
+cmov.um
+- Tested our conditional move by storing the number value 3 (ASCII is 51) into
+  a register and then storing another value in what was supposed to be register
+  c. Then we used the cmov function and stored the value 3 in the original
+  register into a new one. We then outputted the new register, expecting it
+  to contain the value 3.
+
+map_unmap.um
+- Tested our mapping by having a for loop that maps and unmaps registers of 
+  size 1. We are not outputting anything because we are just 
+  testing with valgrind to ensure no memory leaks or segfaults are occuring.
+
+sload_sstore.um
+- Tested our segment load and store functions by creating mapped memory of size
+  10 and then loading the position we are trying to access, 5 in this case.
+  Next we load 97, the 'a' letter in ASCII into this position and output it.
+
+load_program.um
+- By loading intial values and calling load program, 
+  we set load program to duplicate m[0] and set prog counter to m[0][7].
+  Then we put dummy instructions in between m[0][0] and m[0][7] that should
+  not change any register values. Then we made a instruction after the prog
+  counter and showed that it did change value by outputting its result.
+
+comprehensive.um
+- This program makes use of all the registers and tests multiple different
+  functions at once. It intially takes input 10 and 2 to store into r1 and r2
+  respectively. Then it multiplies r1 and r2 and stores that in r3 and adds r3
+  by itself storing that into r4. It then performes a conditional move that is 
+  true, storing the value in r4 into r5. At this point, the value is 40. Then 
+  to test segload and segstore, we allocate space of size 10 and then at the 
+  second space we store the value in r5 which is 40. We then print this out
+  which in ASCII should be '('.
+
+
+
+
